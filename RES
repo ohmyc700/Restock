@@ -1,0 +1,182 @@
+// ==UserScript==
+// @name         Neopets Restock Helper
+// @version      2024.07.30
+// @description  Changes font color of item names if they're worth restocking
+// @match        https://www.neopets.com/objects.phtml?obj_type=*&type=shop
+// @match        https://www.neopets.com/objects.phtml?type=shop&obj_type=*
+// @match        https://www.neopets.com/quickstock.phtml*
+// @match        https://www.neopets.com/safetydeposit.phtml?*
+// @icon         https://images.neopets.com/themes/036_ddc_je4z0/events/trade_accept.png
+// @author       helpful zafara
+// @namespace    https://greasyfork.org/users/1277376
+// @downloadURL https://update.greasyfork.org/scripts/490440/Neopets%20Restock%20Helper.user.js
+// @updateURL https://update.greasyfork.org/scripts/490440/Neopets%20Restock%20Helper.meta.js
+// ==/UserScript==
+
+// Version 2024.03.21
+  // Include most food shops data
+
+// Version 2024.06.03
+  // Simplifed script and improved speed.
+
+// Version 2024.07.04
+  // Updated script to load from json file, decreasing script size
+  // json allows me to update items list without having to reupload userscript each time I reevaluate
+  // users have the ability to create and host their own file and update if so desired
+
+// Version 2024.07.24
+  // Updated script to load from multiple json files simultaneously
+  // this is mostly a QOL improvement for myself, now I can keep separate lists for each color category
+  // instead of having thousands of lines to search through every time I need to find and update a single item.
+  // Also added additional colors, orange and grey for future use.
+     // For items worth buying instantly, font changes to Green
+     // For items worth haggling, font changes to Yellow
+     // For items only worth buying on Half Price Day, font changes to Red
+     // just for fun, good battledome drops and all dubloons, font changes to Purple
+     // Grey text designates the item has such low value you should never buy it from shops
+     // Red text designates items that are profitable mainly on reduced-price day on the third day of the month.
+     // Yellow text designates items that may require haggling to be profitable.
+     // Green text designates items that are profitable even when you don't haggle.
+     // Items that sell in user-shops for under 1k NP, or sell for less than restock value, are going to show up as plain colored text.
+
+// Version 2024.07.30
+  // Separated json files from one large repository to smaller files for each shop. This allows me to update them more easily.
+     // It also allows users the option to comment out or remove shops that they aren't restocking.
+     // Pizzaroo and Huberts Hot Dogs will be active by default.
+     // I recommend enabling and disabling options based on where you restock to reduce the amount of pulls this script makes.
+
+(function() {
+    var patterns = [], classes = [];
+
+    // Function to fetch and process JSON files
+    function fetchJsonFiles() {
+        var jsonFiles = [
+///            'https://raw.githubusercontent.com/unoriginality786/796v6dj/main/Battledome%20Drops',
+///            'https://raw.githubusercontent.com/unoriginality786/796v6dj/main/Huberts%20Hot%20Dogs',
+///            'https://raw.githubusercontent.com/unoriginality786/796v6dj/main/Pizzaroo',
+               'https://raw.githubusercontent.com/ohmyc700/Restock/main/mystical',
+               'https://raw.githubusercontent.com/ohmyc700/Restock/main/Books',
+               'https://raw.githubusercontent.com/ohmyc700/Restock/main/toys',
+               'https://raw.githubusercontent.com/ohmyc700/Restock/main/plushie',
+               'https://raw.githubusercontent.com/ohmyc700/Restock/main/bakery',
+               'https://raw.githubusercontent.com/ohmyc700/Restock/main/toys',
+               'https://raw.githubusercontent.com/ohmyc700/Restock/main/candy',
+               'https://raw.githubusercontent.com/ohmyc700/Restock/main/toys',
+               'https://raw.githubusercontent.com/ohmyc700/Restock/main/spooky',
+               'https://raw.githubusercontent.com/ohmyc700/Restock/main/Food',
+               'https://raw.githubusercontent.com/ohmyc700/Restock/main/uniclothing',
+               'https://raw.githubusercontent.com/ohmyc700/Restock/main/usuki',
+               'https://raw.githubusercontent.com/ohmyc700/Restock/main/cogs',
+               'https://raw.githubusercontent.com/ohmyc700/Restock/main/stamps',
+///            'https://raw.githubusercontent.com/unoriginality786/796v6dj/main/Lost%20Desert%20Foods',
+///            'https://raw.githubusercontent.com/unoriginality786/796v6dj/main/Exquisite%20Ambrosia',
+///            'https://raw.githubusercontent.com/unoriginality786/796v6dj/main/Kiko%20Lake%20Treats',
+///            'https://raw.githubusercontent.com/unoriginality786/796v6dj/main/Cafe%20Kreludor',
+               'https://raw.githubusercontent.com/unoriginality786/796v6dj/main/Faerie%20Foods',
+///            'https://raw.githubusercontent.com/unoriginality786/796v6dj/main/Jelly%20Foods',
+///            'https://raw.githubusercontent.com/unoriginality786/796v6dj/main/Exotic%20Foods',
+///            'https://raw.githubusercontent.com/unoriginality786/796v6dj/main/Brightvale%20Fruits',
+               'https://raw.githubusercontent.com/unoriginality786/796v6dj/main/Coffee%20Cave',
+///            'https://raw.githubusercontent.com/unoriginality786/796v6dj/main/Smoothies',
+///            'https://raw.githubusercontent.com/unoriginality786/796v6dj/main/Chocolate%20Shop%20Partial',
+               'https://raw.githubusercontent.com/unoriginality786/796v6dj/main/Slushies',
+///            'https://raw.githubusercontent.com/unoriginality786/796v6dj/main/Crumpetmonger%20and%20Draik%20Eggs'
+        ];
+
+        var promises = jsonFiles.map(url => {
+            return fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch JSON');
+                    }
+                    return response.json();
+                });
+        });
+        return Promise.all(promises);
+    }
+
+    // Add words to the dictionary with a specified class
+    function defwords(words, which_class) {
+        words.forEach(w => {
+            var word = w.replace(/^=/, "");
+            patterns.push(new RegExp("([^a-zA-Z])(" + word + ")([^a-zA-Z])", w.startsWith("=") ? "g" : "gi"));
+            classes.push(which_class);
+        });
+    }
+
+    // Quote HTML metacharacters in body text
+    function quoteHTML(s) {
+        return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    // Add CSS style rules to the document
+    function addGlobalStyle(css) {
+        var style = document.createElement('style');
+        style.type = 'text/css';
+        style.textContent = css;
+        document.head.appendChild(style);
+    }
+
+    // Apply highlighting replacements to a text sequence
+    var curpat; // Hidden argument to repmatch()
+    var changes = 0; // Number of changes made by repmatch()
+
+    function repmatch(matched, before, word, after) {
+        changes++;
+        return before + '<span class="' + classes[curpat] + '">' + word + '</span>' + after;
+    }
+
+    function highlight(s) {
+        s = " " + s;
+        for (curpat = 0; curpat < patterns.length; curpat++) {
+            s = s.replace(patterns[curpat], repmatch);
+        }
+        return s.substring(1);
+    }
+
+    // Function to highlight text nodes in the body
+    function highlightBodyText() {
+        var textnodes = document.evaluate("//body//text()", document, null, XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
+
+        for (var i = 0; i < textnodes.snapshotLength; i++) {
+            var node = textnodes.snapshotItem(i);
+            if (!node.parentNode.matches("style, textarea, script")) {
+                if (!(/^\s*$/.test(node.data))) {
+                    var s = " " + node.data + " ";
+                    var d = highlight(quoteHTML(s));
+                    if (changes > 0) {
+                        var rep = document.createElement("span");
+                        rep.innerHTML = d.substring(1, d.length - 1);
+                        node.parentNode.replaceChild(rep, node);
+                    }
+                }
+            }
+        }
+    }
+
+    // Load JSON files and start processing
+    fetchJsonFiles()
+        .then(datas => {
+            datas.forEach(data => {
+                Object.keys(data).forEach(key => {
+                    defwords(data[key], key);
+                });
+            });
+
+            // Once patterns and classes are populated, add styles and highlight
+            addGlobalStyle(`
+                span.grey { background-color: #ffffff; color: #909090;} +
+                span.red { background-color: #ffffff; color: #ff1a00; }
+                span.orange { background-color: #ffffff; color: #ffa500;}
+                span.yellow { background-color: #ffffff; color: #fdff00; }
+                span.green { background-color: #ffffff; color: #aaff00; }
+                span.purple { background-color: #ffffff; color: #bf40bf; }
+                span.blank { background-color: #ffffff; color: #ffffff; }
+            `);
+
+            // Highlight words in body copy
+            highlightBodyText();
+        })
+        .catch(error => console.error('Error loading JSON files:', error));
+
+})();
