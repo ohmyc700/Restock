@@ -618,7 +618,11 @@
         "Nimmo Shenkuu Dress",
         "Aisha Maiden Skirt",
         "Flouncy Xweetok Wig",
-        "Flowery Kacheek Wig"
+        "Flowery Kacheek Wig",
+        "Nature Kacheek Wig",
+        "Lotus Xweetok Wig",
+        "Xweetok Party Wig",
+        "Xandra Xweetok Wig"
     ],
     "orange": [
         "Lutari Aristocrat Jacket",
@@ -1171,6 +1175,7 @@
         "Adventurer Mynci Shirt",
         "Holiday Themed Earrings",
         "Aisha Wizard Robe",
-        "Moehog Card King Sword"
+        "Moehog Card King Sword",
+        "Easygoing Xweetok Wig"
     ]
 }
